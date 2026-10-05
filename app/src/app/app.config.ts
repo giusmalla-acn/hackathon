@@ -1,3 +1,4 @@
+import { provideHttpClient } from '@angular/common/http';
 import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
@@ -12,7 +13,8 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     // Include A11yModule della CDK (LiveAnnouncer, FocusMonitor).
     provideNarration(),
-    // Solo fallback: nessun endpoint, quindi nessuna chiamata AI e testi statici dei campi.
-    provideAssist(REGISTRATION_FIELDS),
+    provideHttpClient(),
+    // Backend AI su /api/assist (proxy verso agents/), con i testi statici dei campi come fallback.
+    provideAssist('ai', { fallback: REGISTRATION_FIELDS }),
   ]
 };
