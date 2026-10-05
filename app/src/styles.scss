@@ -1,0 +1,88 @@
+/* Global styles: accessibility utilities and base focus treatment. */
+
+:root {
+  --color-text: #0b0c0c;
+  --color-background: #ffffff;
+  --focus-outline-color: #0b0c0c;
+  --focus-halo-color: #ffdd00;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-background);
+}
+
+/* Visually hidden but still announced by screen readers. */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* High-contrast focus ring: dark outline plus a yellow halo, visible on light and dark backgrounds. */
+:focus-visible {
+  outline: 3px solid var(--focus-outline-color);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px var(--focus-halo-color);
+}
+
+/* Programmatic focus targets (e.g. <main tabindex="-1">) don't need a ring on mouse interaction. */
+[tabindex='-1']:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.skip-link {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 1000;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  color: var(--color-background);
+  background: var(--color-text);
+  text-decoration: underline;
+  transform: translateY(-200%);
+
+  &:focus,
+  &:focus-visible {
+    transform: none;
+  }
+}
+
+@media (forced-colors: active) {
+  /* box-shadow is dropped in forced colors: rely on a thicker system-colored outline. */
+  :focus-visible {
+    outline: 4px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+
+  .skip-link {
+    color: LinkText;
+    background: Canvas;
+    border: 2px solid CanvasText;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    border: 1px solid ButtonText;
+  }
+}
