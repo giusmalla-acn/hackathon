@@ -1,3 +1,4 @@
+// CONGELATO dopo S0
 /**
  * Esito della validazione di un campo.
  *

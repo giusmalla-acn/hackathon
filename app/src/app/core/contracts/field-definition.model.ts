@@ -1,3 +1,4 @@
+// CONGELATO dopo S0
 import type { ValidationErrorCode } from './validation.model';
 
 export type FieldId = 'name' | 'email' | 'password';

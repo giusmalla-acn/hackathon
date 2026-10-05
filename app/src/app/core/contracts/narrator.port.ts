@@ -1,3 +1,4 @@
+// CONGELATO dopo S0
 export type NarratorPoliteness = 'polite' | 'assertive';
 
 /**

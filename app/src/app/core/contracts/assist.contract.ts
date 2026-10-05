@@ -1,3 +1,4 @@
+// CONGELATO dopo S0
 /**
  * Contratto tra app e agente AI di assistenza.
  * Copia speculare in agents/src/contract.ts: tenere sincronizzato.
