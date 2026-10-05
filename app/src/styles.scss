@@ -1,4 +1,12 @@
-/* Global styles: accessibility utilities and base focus treatment. */
+/*
+ * Global styles: accessibility utilities and base focus treatment.
+ * Palette contrast on white: text 19.6:1, error 7.3:1, borders 7.1:1 (WCAG AAA 1.4.6, 1.4.11).
+ */
+
+@use '@angular/cdk';
+
+/* Hides the CDK LiveAnnouncer regions used by the narration: announced, never shown or overflowing. */
+@include cdk.a11y-visually-hidden();
 
 :root {
   --color-text: #0b0c0c;
@@ -22,6 +30,27 @@ body {
   line-height: 1.5;
   color: var(--color-text);
   background: var(--color-background);
+  /* Reflow (WCAG 1.4.10): long words and emails wrap instead of scrolling sideways at 320 CSS px / 400% zoom. */
+  overflow-wrap: break-word;
+}
+
+img,
+svg,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+input,
+button,
+select,
+textarea {
+  max-width: 100%;
+}
+
+/* Fieldsets default to min-width: min-content, which overflows narrow viewports. */
+fieldset {
+  min-width: 0;
 }
 
 main {
@@ -46,6 +75,16 @@ input:not([type='radio']):not([type='checkbox']) {
   border-radius: 4px;
 }
 
+/* Native radios are 13 px: enlarge them to meet the 24x24 target size (WCAG 2.5.8). */
+input[type='radio'],
+input[type='checkbox'] {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0 0.5rem 0 0;
+  vertical-align: middle;
+  accent-color: var(--color-text);
+}
+
 button {
   min-width: 2.75rem;
   min-height: 2.75rem;
@@ -64,10 +103,20 @@ button.button--primary {
   background: var(--color-text);
 }
 
-.actions {
+/* aria-disabled keeps the button focusable; a dashed border marks it without lowering contrast. */
+button[aria-disabled='true'] {
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+.actions,
+.assist-panel {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.actions {
   margin-block: 1.5rem;
 }
 
@@ -114,7 +163,18 @@ button.button--primary {
   }
 }
 
+/*
+ * Windows contrast themes: colours become system colours, so every state needs a non-colour cue
+ * (border, outline, text, icon). Nothing here relies on background colour or box-shadow to be seen.
+ */
 @media (forced-colors: active) {
+  /* Decorative images would sit on the user's chosen background with unknown contrast. */
+  *,
+  *::before,
+  *::after {
+    background-image: none !important;
+  }
+
   /* box-shadow is dropped in forced colors: rely on a thicker system-colored outline. */
   :focus-visible {
     outline: 4px solid Highlight;
@@ -128,10 +188,21 @@ button.button--primary {
     border: 2px solid CanvasText;
   }
 
+  /* Same width as the default theme, so controls and link-styled buttons keep a visible edge. */
   button,
   input,
   select,
   textarea {
-    border: 1px solid ButtonText;
+    border: 2px solid ButtonText;
+  }
+
+  /* The primary button loses its dark fill: a thicker border keeps it recognisable. */
+  button.button--primary {
+    border-width: 4px;
+  }
+
+  button[aria-disabled='true'] {
+    color: GrayText;
+    border: 2px dashed GrayText;
   }
 }

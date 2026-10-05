@@ -32,6 +32,15 @@
   font-weight: 700;
   color: var(--color-error);
   border-inline-start: 4px solid currentColor;
+
+  p {
+    margin: 0;
+  }
+}
+
+.field__error-list {
+  margin: 0.25rem 0 0;
+  padding-inline-start: 1.25rem;
 }
 
 /* Icona testuale: resta visibile anche in forced-colors, dove il colore non distingue l'errore. */

@@ -222,6 +222,75 @@ describe('RegistrationWizardComponent', () => {
     await expectNoAxeViolations(el);
   });
 
+  describe('E2-3: weak password', () => {
+    beforeEach(async () => {
+      await press('Inizia');
+      await type('Anna');
+      await press('Avanti');
+      await type('anna@esempio.it');
+      await press('Avanti');
+    });
+
+    it('(a) "abc": counts the errors, reads PASSWORD_TOO_SHORT with the length, focuses the field', async () => {
+      await type('abc');
+      await press('Avanti');
+
+      expect(title().textContent?.trim()).toBe('Passo 3 di 3: Password');
+      expect(document.activeElement).toBe(field());
+      expect(field().getAttribute('aria-invalid')).toBe('true');
+      expect(lastSaid()).toEqual([
+        '2 errori trovati. Errore nel campo Password: la password è troppo corta: hai scritto 3 caratteri, ne servono almeno 8.',
+        'assertive',
+      ]);
+      expect(el.querySelector('.field__error')!.textContent).toContain('2 errori trovati nel campo Password:');
+      await expectNoAxeViolations(el);
+    });
+
+    it('(b) "abcdefgh": reads PASSWORD_WEAK "aggiungi un numero"', async () => {
+      await type('abcdefgh');
+      await press('Avanti');
+
+      expect(document.activeElement).toBe(field());
+      expect(field().getAttribute('aria-invalid')).toBe('true');
+      expect(lastSaid()).toEqual(['Errore nel campo Password: la password è debole: aggiungi un numero.', 'assertive']);
+    });
+
+    it('never reads the password', async () => {
+      await type('abc');
+      await press('Avanti');
+      await type('abcdefgh');
+      await press('Avanti');
+
+      const said = narrator.say.mock.calls.map(([text]) => text as string);
+      expect(said.some((text) => text.includes('abc'))).toBe(false);
+    });
+
+    it('does not announce anything while the user corrects the field', async () => {
+      await type('abc');
+      await press('Avanti');
+      narrator.say.mockClear();
+
+      await type('abcd');
+      await type('abcd1');
+      expect(narrator.say).not.toHaveBeenCalled();
+      expect(el.querySelector('.field__error')!.textContent).toContain('hai scritto 3 caratteri');
+
+      await type('abcdefg1');
+      await press('Avanti');
+      expectFocusOnTitle('Riepilogo dei dati');
+      expect(narrator.say).not.toHaveBeenCalledWith(expect.anything(), 'assertive');
+    });
+  });
+
+  it('reads a single error without the count', async () => {
+    await press('Inizia');
+    await press('Avanti');
+    expect(lastSaid()).toEqual([
+      'Errore nel campo Nome: il nome è vuoto. Scrivi il tuo nome, poi premi Avanti.',
+      'assertive',
+    ]);
+  });
+
   it('returning to a field that had an error announces the step, not the old error', async () => {
     await press('Inizia');
     await type('Anna');
@@ -314,6 +383,61 @@ describe('RegistrationWizardComponent', () => {
     await press('Avanti');
     expectFocusOnTitle('Riepilogo dei dati');
     expect(lastSaid()[0]).toContain('Email: anna.rossi@esempio.it.');
+  });
+
+  it.each([
+    ['Modifica nome', 'Passo 1 di 3: Nome', 'Anna'],
+    ['Modifica email', 'Passo 2 di 3: Email', 'anna@esempio.it'],
+    ['Modifica password', 'Passo 3 di 3: Password', 'Girasole42'],
+  ])('"%s" goes to the right step, with its value and the focus on the title', async (button, heading, value) => {
+    await press('Inizia');
+    await type('Anna');
+    await press('Avanti');
+    await type('anna@esempio.it');
+    await press('Avanti');
+    await type('Girasole42');
+    await press('Avanti');
+
+    await press(button);
+    expectFocusOnTitle(heading);
+    expect(field().value).toBe(value);
+
+    await press('Avanti');
+    expectFocusOnTitle('Riepilogo dei dati');
+  });
+
+  it('E2-8: Indietro and Modifica keep the values and return to the summary', async () => {
+    await press('Inizia');
+    await type('Anna');
+    await press('Avanti');
+    await type('anna@esempio.it');
+    await press('Avanti');
+    await type('Girasole42');
+
+    // 1. Indietro due volte dal Passo 3: valori conservati, focus sul titolo a ogni passo.
+    await press('Indietro');
+    expectFocusOnTitle('Passo 2 di 3: Email');
+    expect(field().value).toBe('anna@esempio.it');
+    await press('Indietro');
+    expectFocusOnTitle('Passo 1 di 3: Nome');
+    expect(field().value).toBe('Anna');
+
+    // 2. Di nuovo avanti fino al riepilogo.
+    await press('Avanti');
+    await press('Avanti');
+    expectFocusOnTitle('Passo 3 di 3: Password');
+    expect(field().value).toBe('Girasole42');
+    await press('Avanti');
+    expectFocusOnTitle('Riepilogo dei dati');
+
+    // 3. Modifica email: focus sul titolo del Passo 2; Avanti torna al riepilogo con la nuova email.
+    await press('Modifica email');
+    expectFocusOnTitle('Passo 2 di 3: Email');
+    await type('anna.rossi@esempio.it');
+    await press('Avanti');
+    expectFocusOnTitle('Riepilogo dei dati');
+    expect(lastSaid()[0]).toContain('Email: anna.rossi@esempio.it.');
+    expect(el.textContent).toContain('anna.rossi@esempio.it');
   });
 
   it('includes the step title in the announcement in voice mode', async () => {

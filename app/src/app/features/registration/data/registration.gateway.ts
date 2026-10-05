@@ -12,10 +12,13 @@ export abstract class RegistrationGateway {
   abstract register(values: RegistrationValues): Promise<void>;
 }
 
-/** Simula il backend: non memorizza né registra i valori. */
+/** Latenza simulata del backend, abbastanza lunga da rendere percepibile lo stato di invio. */
+export const MOCK_REGISTRATION_DELAY_MS = 500;
+
+/** Simula il backend: risponde dopo `MOCK_REGISTRATION_DELAY_MS` e non memorizza né registra i valori. */
 @Injectable()
 export class MockRegistrationGateway extends RegistrationGateway {
   register(_values: RegistrationValues): Promise<void> {
-    return Promise.resolve();
+    return new Promise((resolve) => setTimeout(resolve, MOCK_REGISTRATION_DELAY_MS));
   }
 }

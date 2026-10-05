@@ -9,11 +9,22 @@
     }
   </ul>
 
-  @if (errorMessage(); as message) {
-    <p class="field__error" [id]="ids.error">
+  @if (invalid()) {
+    <div class="field__error" [id]="ids.error">
       <span class="field__error-icon" aria-hidden="true">!</span>
-      {{ message }}
-    </p>
+      @if (errorList().length === 1) {
+        <p>Errore nel campo {{ field().label }}: {{ errorList()[0] }}</p>
+      } @else {
+        <div>
+          <p>{{ errorSummary() }}</p>
+          <ul class="field__error-list">
+            @for (message of errorList(); track $index) {
+              <li>{{ message }}</li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
   }
 
   <div class="field__control">
