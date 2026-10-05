@@ -1,0 +1,212 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+
+import { Narrator } from '../../../../core/contracts';
+import { NarrationService } from '../../../../core/narration';
+import { RegistrationGateway } from '../../data/registration.gateway';
+import { expectNoAxeViolations, tabbables, tabName } from '../testing/a11y-helpers';
+import { RegistrationWizardComponent } from './registration-wizard.component';
+
+type NarratorStub = { [K in keyof Narrator]: jest.Mock };
+
+describe('RegistrationWizardComponent', () => {
+  let fixture: ComponentFixture<RegistrationWizardComponent>;
+  let el: HTMLElement;
+  let narrator: NarratorStub;
+  let register: jest.Mock;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    narrator = { say: jest.fn(), stop: jest.fn(), repeatLast: jest.fn() };
+    register = jest.fn().mockResolvedValue(undefined);
+
+    TestBed.configureTestingModule({
+      imports: [RegistrationWizardComponent],
+      providers: [
+        { provide: NarrationService, useValue: narrator },
+        { provide: Narrator, useExisting: NarrationService },
+        { provide: RegistrationGateway, useValue: { register } },
+      ],
+    });
+    fixture = TestBed.createComponent(RegistrationWizardComponent);
+    el = fixture.nativeElement as HTMLElement;
+    await render();
+  });
+
+  async function render(): Promise<void> {
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  /** Raggiunge il pulsante con Tab (deve essere tabulabile) e lo attiva come farebbero Invio o Spazio. */
+  async function press(name: string): Promise<void> {
+    const button = tabbables(el).find((node) => node.tagName === 'BUTTON' && tabName(node) === name);
+    if (!button) {
+      throw new Error(`Nessun pulsante tabulabile "${name}" in: ${tabbables(el).map(tabName).join(', ')}`);
+    }
+    button.focus();
+    button.click();
+    await render();
+  }
+
+  async function type(text: string): Promise<void> {
+    const input = field();
+    input.focus();
+    input.value = text;
+    input.dispatchEvent(new Event('input'));
+    await render();
+  }
+
+  const field = (): HTMLInputElement => el.querySelector('input:not([type="radio"])')!;
+  const title = (): HTMLElement => el.querySelector('h1')!;
+  const progress = (): string => el.querySelector('[aria-live="polite"]')!.textContent!.trim();
+  const lastSaid = (): [string, string?] => narrator.say.mock.calls.at(-1) as [string, string?];
+
+  function expectFocusOnTitle(text: string): void {
+    expect(title().textContent?.trim()).toBe(text);
+    expect(document.activeElement).toBe(title());
+  }
+
+  it('starts on the welcome screen with the voice settings and an Inizia button', async () => {
+    expect(title().textContent?.trim()).toBe('Registrazione guidata');
+    expect(el.querySelector('app-voice-settings')).not.toBeNull();
+    expect(tabbables(el).map(tabName).at(-1)).toBe('Inizia');
+    expect(progress()).toBe('');
+    await expectNoAxeViolations(el);
+  });
+
+  it('completes the happy path with the keyboard only, without AI', async () => {
+    await press('Inizia');
+    expectFocusOnTitle('Passo 1 di 3: Nome');
+    expect(progress()).toBe('Passo 1 di 3');
+    expect(lastSaid()[0]).toBe(
+      'Modalità screen reader attiva. Gli annunci saranno letti dal tuo screen reader. Scrivi il tuo nome, poi premi Avanti.',
+    );
+    await expectNoAxeViolations(el);
+
+    await type('Anna Rossi');
+    await press('Avanti');
+    expectFocusOnTitle('Passo 2 di 3: Email');
+    expect(progress()).toBe('Passo 2 di 3');
+    expect(lastSaid()).toEqual(['Scrivi il tuo indirizzo email, poi premi Avanti.']);
+
+    await type('anna.rossi@esempio.it');
+    await press('Avanti');
+    expectFocusOnTitle('Passo 3 di 3: Password');
+    expect(field().type).toBe('password');
+
+    await type('Girasole42');
+    await press('Avanti');
+    expectFocusOnTitle('Riepilogo dei dati');
+    expect(progress()).toBe('');
+    expect(lastSaid()[0]).toBe(
+      'Controlla i tuoi dati. Nome: Anna Rossi. Email: anna.rossi@esempio.it. Password: inserita, 10 caratteri, non letta. ' +
+        'Per correggere un dato premi Modifica accanto al dato. Per completare premi Conferma registrazione.',
+    );
+    expect(el.textContent).toContain('anna.rossi@esempio.it');
+    expect(el.textContent).not.toContain('Girasole42');
+    expect(tabbables(el).map(tabName)).toEqual([
+      'Modifica nome',
+      'Modifica email',
+      'Modifica password',
+      'Indietro',
+      'Conferma registrazione',
+    ]);
+    await expectNoAxeViolations(el);
+
+    await press('Conferma registrazione');
+    await render();
+    expect(register).toHaveBeenCalledWith({ name: 'Anna Rossi', email: 'anna.rossi@esempio.it', password: 'Girasole42' });
+    expectFocusOnTitle('Registrazione completata');
+    expect(lastSaid()).toEqual(['Registrazione completata, Anna Rossi. Il tuo account è stato creato.']);
+    await expectNoAxeViolations(el);
+  });
+
+  it('keeps the field order: input, assist panel slot, Indietro, Avanti', async () => {
+    await press('Inizia');
+    expect(tabbables(el).map(tabName)).toEqual(['INPUT', 'Indietro', 'Avanti']);
+    expect(el.querySelector('app-field-step .assist-panel')).not.toBeNull();
+  });
+
+  it('submits the step with Enter in the field', async () => {
+    await press('Inizia');
+    await type('Anna');
+    field().form!.requestSubmit();
+    await render();
+    expectFocusOnTitle('Passo 2 di 3: Email');
+  });
+
+  it('does not validate while typing', async () => {
+    await press('Inizia');
+    await type('A1');
+    expect(field().hasAttribute('aria-invalid')).toBe(false);
+    expect(narrator.say).not.toHaveBeenCalledWith(expect.anything(), 'assertive');
+  });
+
+  it('on Avanti with an error stays on the step, focuses the invalid field and announces assertively', async () => {
+    await press('Inizia');
+    await type('Anna');
+    await press('Avanti');
+    await type('anna.rossi.esempio.it');
+    await press('Avanti');
+
+    expect(title().textContent?.trim()).toBe('Passo 2 di 3: Email');
+    expect(document.activeElement).toBe(field());
+    expect(field().getAttribute('aria-invalid')).toBe('true');
+    expect(lastSaid()).toEqual([
+      "Errore nel campo Email: manca la chiocciola. Un'email ha la forma nome chiocciola dominio, per esempio anna punto rossi chiocciola esempio punto it.",
+      'assertive',
+    ]);
+    await expectNoAxeViolations(el);
+  });
+
+  it('goes back keeping values and focusing the title, up to the welcome screen', async () => {
+    await press('Inizia');
+    await type('Anna');
+    await press('Avanti');
+    await press('Indietro');
+
+    expectFocusOnTitle('Passo 1 di 3: Nome');
+    expect(field().value).toBe('Anna');
+
+    await press('Indietro');
+    expectFocusOnTitle('Registrazione guidata');
+  });
+
+  it('returns to the summary after editing a field', async () => {
+    await press('Inizia');
+    await type('Anna');
+    await press('Avanti');
+    await type('anna@esempio.it');
+    await press('Avanti');
+    await type('Girasole42');
+    await press('Avanti');
+
+    await press('Modifica email');
+    expectFocusOnTitle('Passo 2 di 3: Email');
+    expect(field().value).toBe('anna@esempio.it');
+
+    await type('anna.rossi@esempio.it');
+    await press('Avanti');
+    expectFocusOnTitle('Riepilogo dei dati');
+    expect(lastSaid()[0]).toContain('Email: anna.rossi@esempio.it.');
+  });
+
+  it('includes the step title in the announcement in voice mode', async () => {
+    (el.querySelector<HTMLInputElement>('input[type="radio"][value="voice"]')!).click();
+    await render();
+    await press('Inizia');
+
+    expect(lastSaid()[0]).toMatch(/^Modalità voce integrata attiva\..* Passo 1 di 3: Nome\. Scrivi il tuo nome, poi premi Avanti\.$/);
+  });
+
+  it('stops the narration on Esc and while typing', async () => {
+    await press('Inizia');
+    narrator.stop.mockClear();
+
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(narrator.stop).toHaveBeenCalledTimes(1);
+
+    await type('A');
+    expect(narrator.stop).toHaveBeenCalledTimes(2);
+  });
+});

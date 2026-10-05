@@ -1,0 +1,50 @@
+<h1 [id]="ids.title" tabindex="-1">{{ title() }}</h1>
+
+<div class="field" [class.field--invalid]="invalid()">
+  <label class="field__label" [for]="ids.input">{{ field().label }}</label>
+  <p class="field__hint" [id]="ids.hint">{{ field().purpose }}</p>
+  <ul class="field__rules" [id]="ids.rules">
+    @for (rule of field().rules; track $index) {
+      <li>{{ rule }}</li>
+    }
+  </ul>
+
+  @if (errorMessage(); as message) {
+    <p class="field__error" [id]="ids.error">
+      <span class="field__error-icon" aria-hidden="true">!</span>
+      {{ message }}
+    </p>
+  }
+
+  <div class="field__control">
+    <input
+      #control
+      class="field__input"
+      [id]="ids.input"
+      [type]="inputType()"
+      [attr.autocomplete]="field().autocomplete"
+      [value]="value()"
+      [attr.aria-describedby]="describedBy()"
+      [attr.aria-invalid]="invalid() ? 'true' : null"
+      [attr.aria-errormessage]="invalid() ? ids.error : null"
+      autocapitalize="off"
+      spellcheck="false"
+      (input)="onInput($event)"
+    />
+    @if (isPassword()) {
+      <button
+        type="button"
+        class="field__toggle"
+        [attr.aria-label]="toggleLabel()"
+        [attr.aria-controls]="ids.input"
+        (click)="togglePassword()"
+      >
+        {{ toggleLabel() }}
+      </button>
+    }
+  </div>
+</div>
+
+<div class="assist-slot">
+  <ng-content />
+</div>
