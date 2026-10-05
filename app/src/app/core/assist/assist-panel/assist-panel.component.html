@@ -1,0 +1,33 @@
+<div role="group" class="assist-panel" [attr.aria-label]="'Aiuto per il campo ' + field().label">
+  <button type="button" (click)="repeat()">Ripeti</button>
+  <button type="button" (click)="rephrase()">Spiega in altro modo</button>
+  <button type="button" (click)="example()">Esempio</button>
+  <button type="button" (click)="readBack()">Rileggi cosa ho scritto</button>
+  @if (voiceSupported) {
+    <button
+      type="button"
+      [disabled]="!voiceAllowed()"
+      [attr.aria-pressed]="listening()"
+      [attr.aria-describedby]="voiceAllowed() ? null : id + '-voice-off'"
+      (click)="toggleQuestion()"
+    >
+      Fai una domanda a voce
+    </button>
+    @if (!voiceAllowed()) {
+      <p [id]="id + '-voice-off'">Nel campo password il microfono è disattivato per proteggere i tuoi dati.</p>
+    }
+  }
+</div>
+
+@if (confirmingPassword()) {
+  <div
+    role="alertdialog"
+    class="assist-panel__confirm"
+    [attr.aria-labelledby]="id + '-confirm'"
+    (keydown.escape)="cancelPasswordReadBack()"
+  >
+    <p #confirmQuestion [id]="id + '-confirm'" tabindex="-1">{{ confirmText }}</p>
+    <button type="button" (click)="confirmPasswordReadBack()">Sì, leggi la password</button>
+    <button type="button" (click)="cancelPasswordReadBack()">No, torna al campo</button>
+  </div>
+}
