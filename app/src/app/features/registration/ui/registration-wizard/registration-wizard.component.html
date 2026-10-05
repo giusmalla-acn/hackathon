@@ -9,6 +9,7 @@
       [fields]="fields"
       [values]="store.values()"
       [submitting]="store.submitting()"
+      [submitError]="store.submitFailed() ? submitFailedMessage : null"
       (edit)="edit($event)"
       (back)="back()"
       (confirm)="confirm()"

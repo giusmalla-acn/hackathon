@@ -3,6 +3,7 @@ import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { type Observable, Subject } from 'rxjs';
 
 import { type AssistRequest, type AssistResponse, Narrator } from '../../contracts';
+import { SensitiveNarrator } from '../../narration/sensitive-narrator';
 import { SpeechPreferencesStore } from '../../narration/speech-preferences.store';
 import { AssistOrchestrator } from '../assist-orchestrator.service';
 import { provideAssist } from '../provide-assist';
@@ -33,7 +34,7 @@ describe('AssistPanelComponent', () => {
   let navigations: AssistNavigation[];
   let focusRequests: number;
 
-  function create(supported = true): void {
+  function create(supported = true, sensitive?: SensitiveNarrator): void {
     localStorage.clear();
     narrator = { say: jest.fn(), stop: jest.fn(), repeatLast: jest.fn() };
     recognition = new FakeRecognition();
@@ -45,6 +46,7 @@ describe('AssistPanelComponent', () => {
         provideAssist(TEST_FIELDS),
         { provide: Narrator, useValue: narrator },
         { provide: SpeechRecognitionService, useValue: recognition },
+        ...(sensitive ? [{ provide: SensitiveNarrator, useValue: sensitive }] : []),
       ],
     });
     orchestrator = TestBed.inject(AssistOrchestrator);
@@ -273,6 +275,21 @@ describe('AssistPanelComponent', () => {
 
       expect(said()).toEqual(['La password è: G maiuscola, i, r, a, 4, 2.']);
       expect(dialog()).toBeNull();
+      expect(focusRequests).toBe(1);
+    });
+
+    it('"Sì" uses the sensitive narration when available, so the password is not kept', () => {
+      const sensitive = { saySensitive: jest.fn() };
+      TestBed.resetTestingModule();
+      create(true, sensitive);
+      setField('password', 3);
+      setValue('Gira42');
+
+      click('Rileggi cosa ho scritto');
+      click('Sì, leggi la password');
+
+      expect(sensitive.saySensitive).toHaveBeenCalledWith('La password è: G maiuscola, i, r, a, 4, 2.');
+      expect(JSON.stringify(narrator.say.mock.calls)).not.toContain('G maiuscola');
       expect(focusRequests).toBe(1);
     });
 

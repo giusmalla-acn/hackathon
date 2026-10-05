@@ -25,6 +25,7 @@ import {
   errorAnnouncement,
   modeAnnouncement,
   stepTitle,
+  SUBMIT_FAILED_MESSAGE,
   SUMMARY_TITLE,
   summaryAnnouncement,
   WELCOME_INTRO,
@@ -70,6 +71,7 @@ export class RegistrationWizardComponent {
   protected readonly step = this.store.currentStep;
   protected readonly field = this.store.currentField;
   protected readonly stepNumber = computed(() => fieldStepNumber(this.step()));
+  protected readonly submitFailedMessage = SUBMIT_FAILED_MESSAGE;
 
   protected start(): void {
     const prefix = modeAnnouncement(this.prefs.mode());
@@ -98,6 +100,10 @@ export class RegistrationWizardComponent {
 
   protected async confirm(): Promise<void> {
     this.afterAction(await this.store.submit());
+    if (this.store.submitFailed()) {
+      // Il focus resta su "Conferma registrazione", che ora descrive l'errore.
+      this.narrator.say(SUBMIT_FAILED_MESSAGE, 'assertive');
+    }
   }
 
   /** Comandi vocali "campo precedente/successivo" del pannello di assistenza. */
@@ -109,7 +115,11 @@ export class RegistrationWizardComponent {
     this.fieldStep()?.focusInput();
   }
 
-  /** `moved`: lo store ha cambiato passo. Altrimenti, se il campo ha errori, li segnala. */
+  /**
+   * Se il campo mostrato ha errori li segnala, altrimenti annuncia il passo se `moved`.
+   * Lo store azzera gli errori del campo di arrivo con Avanti/Indietro: qui restano solo
+   * quelli appena calcolati o quelli di un invio non valido.
+   */
   private afterAction(moved: boolean, prefix?: string): void {
     const step = this.step();
     const field = this.field();

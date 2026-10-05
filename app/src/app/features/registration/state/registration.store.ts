@@ -26,6 +26,8 @@ export class RegistrationStore {
   private readonly _currentStep = signal<WizardStep>('welcome');
   private readonly _submitted = signal(false);
   private readonly _submitting = signal(false);
+  /** True se l'ultimo `submit()` è fallito nel gateway (rete, server). */
+  private readonly _submitFailed = signal(false);
   /** True dopo "Modifica" dal riepilogo: il prossimo `next()` valido torna al riepilogo. */
   private readonly _editing = signal(false);
 
@@ -34,6 +36,7 @@ export class RegistrationStore {
   readonly currentStep = this._currentStep.asReadonly();
   readonly submitted = this._submitted.asReadonly();
   readonly submitting = this._submitting.asReadonly();
+  readonly submitFailed = this._submitFailed.asReadonly();
   readonly editing = this._editing.asReadonly();
 
   readonly currentField = computed<FieldDefinition | null>(() => {
@@ -64,18 +67,19 @@ export class RegistrationStore {
 
     if (this._editing() && isFieldStep(step)) {
       this._editing.set(false);
-      this._currentStep.set('summary');
+      this.goTo('summary');
     } else {
-      this._currentStep.set(nextStep(step));
+      this.goTo(nextStep(step));
     }
     return true;
   }
 
-  /** Torna al passo precedente conservando i valori. */
+  /** Torna al passo precedente conservando i valori. Esce dalla modalità Modifica. */
   prev(): boolean {
     const step = this._currentStep();
     const previous = prevStep(step);
-    this._currentStep.set(previous);
+    this._editing.set(false);
+    this.goTo(previous);
     return previous !== step;
   }
 
@@ -85,6 +89,7 @@ export class RegistrationStore {
       return;
     }
     this._editing.set(true);
+    this._submitFailed.set(false);
     this._currentStep.set(field);
   }
 
@@ -102,6 +107,7 @@ export class RegistrationStore {
     }
 
     this._submitting.set(true);
+    this._submitFailed.set(false);
     try {
       await this.gateway.register(this._values());
       this._values.update((values) => ({ ...values, password: '' }));
@@ -109,6 +115,7 @@ export class RegistrationStore {
       this._currentStep.set(nextStep('summary'));
       return true;
     } catch {
+      this._submitFailed.set(true);
       return false;
     } finally {
       this._submitting.set(false);
@@ -121,7 +128,21 @@ export class RegistrationStore {
     this._currentStep.set('welcome');
     this._submitted.set(false);
     this._submitting.set(false);
+    this._submitFailed.set(false);
     this._editing.set(false);
+  }
+
+  /**
+   * Navigazione con Avanti/Indietro: gli errori del campo di arrivo sono di una visita
+   * precedente e non vanno più mostrati né annunciati. `edit()` invece li conserva, perché
+   * dopo un invio non valido porta proprio al campo da correggere.
+   */
+  private goTo(step: WizardStep): void {
+    if (isFieldStep(step)) {
+      this._errors.update((current) => ({ ...current, [step]: [] }));
+    }
+    this._submitFailed.set(false);
+    this._currentStep.set(step);
   }
 
   private validate(field: FieldId): readonly ValidationErrorCode[] {

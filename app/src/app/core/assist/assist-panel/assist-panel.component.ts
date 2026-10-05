@@ -26,6 +26,7 @@ import {
   Narrator,
   type ValidationErrorCode,
 } from '../../contracts';
+import { SensitiveNarrator } from '../../narration/sensitive-narrator';
 import { SpeechPreferencesStore } from '../../narration/speech-preferences.store';
 import { AssistOrchestrator } from '../assist-orchestrator.service';
 import { errorAnnouncement, errorMessageFor, joinSentences } from '../assist-texts';
@@ -57,6 +58,8 @@ let nextId = 0;
 })
 export class AssistPanelComponent {
   private readonly narrator = inject(Narrator);
+  /** Per la password letta su richiesta; senza, si ripiega su `Narrator.say()`. */
+  private readonly sensitiveNarrator = inject(SensitiveNarrator, { optional: true });
   private readonly orchestrator = inject(AssistOrchestrator);
   private readonly prefs = inject(SpeechPreferencesStore);
   private readonly recognition = inject(SpeechRecognitionService);
@@ -153,7 +156,12 @@ export class AssistPanelComponent {
 
   protected confirmPasswordReadBack(): void {
     this.confirmingFor.set(null);
-    this.narrator.say(`La password è: ${spellOut(this.value())}.`);
+    const text = `La password è: ${spellOut(this.value())}.`;
+    if (this.sensitiveNarrator) {
+      this.sensitiveNarrator.saySensitive(text);
+    } else {
+      this.narrator.say(text);
+    }
     this.focusFieldRequested.emit();
   }
 

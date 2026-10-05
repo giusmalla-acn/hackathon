@@ -2,8 +2,9 @@ import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { TestBed } from '@angular/core/testing';
 
 import { Narrator } from '../contracts';
-import { NarrationService } from './narration.service';
+import { NarrationService, SENSITIVE_LIVE_REGION_MS } from './narration.service';
 import { provideNarration } from './provide-narration';
+import { SensitiveNarrator } from './sensitive-narrator';
 import { SpeechPreferencesStore } from './speech-preferences.store';
 import { SpeechSynthesisService } from './speech-synthesis.service';
 
@@ -77,6 +78,44 @@ describe('NarrationService', () => {
 
     expect(speech.stop).toHaveBeenCalled();
     expect(announcer.clear).toHaveBeenCalled();
+  });
+
+  describe('saySensitive()', () => {
+    let sensitive: SensitiveNarrator;
+
+    beforeEach(() => (sensitive = TestBed.inject(SensitiveNarrator)));
+
+    it('is registered by provideNarration() on the same service', () => {
+      expect(sensitive).toBe(TestBed.inject(NarrationService));
+    });
+
+    it('in screen reader mode clears the live region after a short time', () => {
+      sensitive.saySensitive('La password è: G maiuscola, i.');
+
+      expect(announcer.announce).toHaveBeenCalledWith(
+        'La password è: G maiuscola, i.',
+        'polite',
+        SENSITIVE_LIVE_REGION_MS,
+      );
+    });
+
+    it('in voice mode speaks with the live regions empty', () => {
+      prefs.setMode('voice');
+      sensitive.saySensitive('La password è: G maiuscola, i.');
+
+      expect(speech.speak).toHaveBeenCalledWith('La password è: G maiuscola, i.');
+      expect(announcer.announce).not.toHaveBeenCalled();
+    });
+
+    it('is not kept for repeatLast(), nor is the text said before it', () => {
+      narrator.say('Passo 3 di 3: Password');
+      sensitive.saySensitive('La password è: G maiuscola, i.');
+      announcer.announce.mockClear();
+
+      narrator.repeatLast();
+
+      expect(announcer.announce).not.toHaveBeenCalled();
+    });
   });
 
   describe('repeatLast()', () => {

@@ -3,11 +3,13 @@ import { EnvironmentProviders, importProvidersFrom, makeEnvironmentProviders } f
 
 import { Narrator } from '../contracts';
 import { NarrationService } from './narration.service';
+import { SensitiveNarrator } from './sensitive-narrator';
 
 /** Registra il `Narrator` dell'app: `inject(Narrator)` restituisce `NarrationService`. */
 export function provideNarration(): EnvironmentProviders {
   return makeEnvironmentProviders([
     importProvidersFrom(A11yModule),
     { provide: Narrator, useExisting: NarrationService },
+    { provide: SensitiveNarrator, useExisting: NarrationService },
   ]);
 }

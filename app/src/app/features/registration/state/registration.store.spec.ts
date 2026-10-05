@@ -149,6 +149,56 @@ describe('RegistrationStore', () => {
     expect(register).not.toHaveBeenCalled();
   });
 
+  it('clears the leftover errors of the field reached with Avanti', () => {
+    fillTo('email');
+    store.setValue('email', 'anna');
+    expect(store.next()).toBe(false);
+    expect(store.currentErrors()).toEqual(['EMAIL_MISSING_AT']);
+
+    store.prev();
+    expect(store.next()).toBe(true);
+    expect(store.currentStep()).toBe('email');
+    expect(store.currentErrors()).toEqual([]);
+    expect(store.values().email).toBe('anna');
+  });
+
+  it('Indietro leaves edit mode: the next valid next follows the normal order', () => {
+    fillTo('summary');
+    store.edit('email');
+    store.prev();
+    expect(store.editing()).toBe(false);
+
+    store.next();
+    expect(store.currentStep()).toBe('email');
+  });
+
+  it('after an invalid submit, Indietro does not skip the field still to be fixed', async () => {
+    fillTo('summary');
+    store.setValue('email', 'anna');
+    await store.submit();
+    expect(store.currentStep()).toBe('email');
+    expect(store.currentErrors()).toEqual(['EMAIL_MISSING_AT']);
+
+    store.prev();
+    store.next();
+    expect(store.currentStep()).toBe('email');
+  });
+
+  it('flags a gateway failure until the summary is left', async () => {
+    register.mockRejectedValueOnce(new Error('rete'));
+    fillTo('summary');
+
+    await store.submit();
+    expect(store.submitFailed()).toBe(true);
+
+    store.prev();
+    expect(store.submitFailed()).toBe(false);
+    store.next();
+
+    await expect(store.submit()).resolves.toBe(true);
+    expect(store.submitFailed()).toBe(false);
+  });
+
   it('reset returns to the initial state', async () => {
     fillTo('summary');
     await store.submit();

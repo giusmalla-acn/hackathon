@@ -49,6 +49,10 @@ export function summaryAnnouncement(values: RegistrationValues): string {
   );
 }
 
+/** Il gateway ha rifiutato l'invio: si resta sul riepilogo con i dati intatti. */
+export const SUBMIT_FAILED_MESSAGE =
+  'Errore: non è stato possibile completare la registrazione. I tuoi dati sono ancora qui. Riprova premendo Conferma registrazione.';
+
 /** §2.5 */
 export function completionAnnouncement(name: string): string {
   return `Registrazione completata, ${name.trim()}. Il tuo account è stato creato.`;

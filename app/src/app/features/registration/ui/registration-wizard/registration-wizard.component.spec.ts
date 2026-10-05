@@ -222,6 +222,68 @@ describe('RegistrationWizardComponent', () => {
     await expectNoAxeViolations(el);
   });
 
+  it('returning to a field that had an error announces the step, not the old error', async () => {
+    await press('Inizia');
+    await type('Anna');
+    await press('Avanti');
+    await type('anna');
+    await press('Avanti');
+    expect(field().getAttribute('aria-invalid')).toBe('true');
+
+    await press('Indietro');
+    await press('Avanti');
+
+    expectFocusOnTitle('Passo 2 di 3: Email');
+    expect(lastSaid()).toEqual(['Scrivi il tuo indirizzo email, poi premi Avanti.']);
+    expect(field().hasAttribute('aria-invalid')).toBe(false);
+    expect(el.textContent).not.toContain('Errore nel campo');
+  });
+
+  it('after Modifica, Indietro returns to the normal order', async () => {
+    await press('Inizia');
+    await type('Anna');
+    await press('Avanti');
+    await type('anna@esempio.it');
+    await press('Avanti');
+    await type('Girasole42');
+    await press('Avanti');
+
+    await press('Modifica email');
+    await press('Indietro');
+    expectFocusOnTitle('Passo 1 di 3: Nome');
+    await press('Avanti');
+    expectFocusOnTitle('Passo 2 di 3: Email');
+  });
+
+  it('announces a failed registration and keeps the user on the summary', async () => {
+    register.mockImplementationOnce(async () => {
+      throw new Error('rete');
+    });
+    await press('Inizia');
+    await type('Anna');
+    await press('Avanti');
+    await type('anna@esempio.it');
+    await press('Avanti');
+    await type('Girasole42');
+    await press('Avanti');
+
+    await press('Conferma registrazione');
+    await render();
+
+    const message =
+      'Errore: non è stato possibile completare la registrazione. I tuoi dati sono ancora qui. Riprova premendo Conferma registrazione.';
+    expect(title().textContent?.trim()).toBe('Riepilogo dei dati');
+    expect(lastSaid()).toEqual([message, 'assertive']);
+    const confirm = tabbables(el).find((node) => tabName(node) === 'Conferma registrazione')!;
+    expect(document.activeElement).toBe(confirm);
+    expect(document.getElementById(confirm.getAttribute('aria-describedby')!)?.textContent?.trim()).toContain(message);
+    await expectNoAxeViolations(el);
+
+    await press('Conferma registrazione');
+    await render();
+    expectFocusOnTitle('Registrazione completata');
+  });
+
   it('goes back keeping values and focusing the title, up to the welcome screen', async () => {
     await press('Inizia');
     await type('Anna');
