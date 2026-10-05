@@ -1,0 +1,37 @@
+<fieldset>
+  <legend>Modalità di lettura</legend>
+  @for (option of modeOptions; track option.value) {
+    <div>
+      <input
+        type="radio"
+        [id]="id + '-mode-' + option.value"
+        [name]="id + '-mode'"
+        [value]="option.value"
+        [checked]="mode() === option.value"
+        [attr.aria-describedby]="id + '-mode-' + option.value + '-hint'"
+        (change)="setMode(option.value)"
+      />
+      <label [for]="id + '-mode-' + option.value">{{ option.label }}</label>
+      <p [id]="id + '-mode-' + option.value + '-hint'">{{ option.hint }}</p>
+    </div>
+  }
+</fieldset>
+
+@if (mode() === 'voice') {
+  <fieldset>
+    <legend>Velocità della voce</legend>
+    @for (option of rateOptions; track option.value; let i = $index) {
+      <div>
+        <input
+          type="radio"
+          [id]="id + '-rate-' + i"
+          [name]="id + '-rate'"
+          [value]="option.value"
+          [checked]="selectedRate() === option.value"
+          (change)="setRate(option.value)"
+        />
+        <label [for]="id + '-rate-' + i">{{ option.label }}</label>
+      </div>
+    }
+  </fieldset>
+}
