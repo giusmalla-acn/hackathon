@@ -43,7 +43,8 @@ export class AssistOrchestrator {
         if (text === null) {
           throw new Error('Risposta AI scartata dall\'output-guard.');
         }
-        return { text, source: 'ai', ...(response.intent ? { intent: response.intent } : {}) };
+        // `source` resta quello del provider: il composito HTTP può aver già usato il fallback.
+        return { ...response, text };
       }),
       catchError(() => this.fallback.assist(safe)),
     );

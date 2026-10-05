@@ -54,14 +54,14 @@ describe('AssistOrchestrator', () => {
     ]);
   });
 
-  it('keeps a valid AI intent and forces source "ai"', () => {
+  it('keeps the intent and the source reported by the provider', () => {
     const orchestrator = setup();
     ai.assist.mockReturnValue(
       of({ text: 'Torno indietro.', source: 'fallback', intent: 'previous-field' }),
     );
 
     expect(collect(orchestrator.assist(explain))).toEqual([
-      { text: 'Torno indietro.', source: 'ai', intent: 'previous-field' },
+      { text: 'Torno indietro.', source: 'fallback', intent: 'previous-field' },
     ]);
   });
 
