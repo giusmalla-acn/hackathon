@@ -13,6 +13,12 @@ import { AssistOrchestrator } from './assist-orchestrator.service';
 import { FallbackAssistProvider } from './fallback-assist.provider';
 import { HttpAssistProvider } from './http-assist.provider';
 
+/** Endpoint del backend AI; in sviluppo `proxy.conf.json` lo inoltra a `agents/`. */
+export const DEFAULT_ASSIST_ENDPOINT = '/api/assist';
+
+/** `'ai'`: backend AI con fallback locale; `'fallback'`: solo testi statici. */
+export type AssistMode = 'ai' | 'fallback';
+
 export interface AssistOptions {
   /** URL del backend AI. Senza, si usa solo il fallback. Richiede `provideHttpClient()`. */
   readonly endpoint?: string;
@@ -22,14 +28,42 @@ export interface AssistOptions {
   readonly timeoutMs?: number;
 }
 
+export interface AssistModeOptions extends AssistOptions {
+  /** Testi statici dei campi; senza, il fallback usa il contesto della richiesta. */
+  readonly fallback?: readonly FieldDefinition[];
+}
+
 /**
  * Registra l'assistenza: `inject(AssistOrchestrator)`.
  *
- * @param fallback testi statici dei campi, usati quando l'AI è spenta, lenta o in errore.
+ * `provideAssist('ai')` registra il provider composito HTTP + fallback su
+ * `DEFAULT_ASSIST_ENDPOINT` e richiede `provideHttpClient()`.
  */
+export function provideAssist(mode: AssistMode, options?: AssistModeOptions): EnvironmentProviders;
+/** @param fallback testi statici dei campi, usati quando l'AI è spenta, lenta o in errore. */
 export function provideAssist(
   fallback: readonly FieldDefinition[],
-  options: AssistOptions = {},
+  options?: AssistOptions,
+): EnvironmentProviders;
+export function provideAssist(
+  modeOrFallback: AssistMode | readonly FieldDefinition[],
+  options: AssistModeOptions = {},
+): EnvironmentProviders {
+  if (modeOrFallback === 'ai') {
+    return assistProviders(options.fallback ?? [], {
+      ...options,
+      endpoint: options.endpoint ?? DEFAULT_ASSIST_ENDPOINT,
+    });
+  }
+  if (modeOrFallback === 'fallback') {
+    return assistProviders(options.fallback ?? [], { timeoutMs: options.timeoutMs });
+  }
+  return assistProviders(modeOrFallback, options);
+}
+
+function assistProviders(
+  fallback: readonly FieldDefinition[],
+  options: AssistOptions,
 ): EnvironmentProviders {
   const config: AssistConfig = {
     aiEnabled: options.aiEnabled ?? options.endpoint !== undefined,
