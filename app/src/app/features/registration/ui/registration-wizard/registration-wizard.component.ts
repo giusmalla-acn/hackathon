@@ -123,7 +123,9 @@ export class RegistrationWizardComponent {
   private afterAction(moved: boolean, prefix?: string): void {
     const step = this.step();
     const field = this.field();
-    const error = field ? errorAnnouncement(field, this.store.currentErrors()) : null;
+    const error = field
+      ? errorAnnouncement(field, this.store.currentErrors(), this.store.values()[field.id])
+      : null;
 
     if (error) {
       this.narrator.say(error, 'assertive');

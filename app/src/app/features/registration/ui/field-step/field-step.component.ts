@@ -6,11 +6,12 @@ import {
   input,
   linkedSignal,
   output,
+  untracked,
   viewChild,
 } from '@angular/core';
 
 import type { FieldDefinition, ValidationErrorCode } from '../../../../core/contracts';
-import { errorAnnouncement, stepTitle } from '../registration-messages';
+import { errorCountText, errorMessages, stepTitle } from '../registration-messages';
 
 let nextId = 0;
 
@@ -57,8 +58,21 @@ export class FieldStepComponent {
   protected readonly inputType = computed(() =>
     this.isPassword() && this.passwordVisible() ? 'text' : this.field().inputType,
   );
-  protected readonly errorMessage = computed(() => errorAnnouncement(this.field(), this.errors()));
-  protected readonly invalid = computed(() => this.errorMessage() !== null);
+  /**
+   * Valore al momento della validazione: gli errori cambiano solo con Avanti, quindi il
+   * messaggio (es. "hai scritto 3 caratteri") non segue la digitazione (spec §1.2).
+   */
+  private readonly validatedValue = linkedSignal<readonly ValidationErrorCode[], string>({
+    source: this.errors,
+    computation: () => untracked(this.value),
+  });
+  protected readonly errorList = computed(() =>
+    errorMessages(this.field(), this.errors(), this.validatedValue()),
+  );
+  protected readonly errorSummary = computed(
+    () => `${errorCountText(this.errorList().length)} nel campo ${this.field().label}:`,
+  );
+  protected readonly invalid = computed(() => this.errorList().length > 0);
   protected readonly describedBy = computed(() =>
     [this.invalid() ? this.ids.error : null, this.ids.hint, this.ids.rules].filter(Boolean).join(' '),
   );
@@ -66,7 +80,7 @@ export class FieldStepComponent {
     this.passwordVisible() ? 'Nascondi password' : 'Mostra password',
   );
 
-  /** Usato dal wizard dopo un errore (spec §1.7). */
+  /** Usato dal wizard dopo un errore (spec §1.7): l'annuncio assertive lo fa il wizard, dentro il gesto. */
   focusInput(): void {
     this.inputRef().nativeElement.focus();
   }

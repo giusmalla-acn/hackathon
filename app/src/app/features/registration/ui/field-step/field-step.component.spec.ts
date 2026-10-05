@@ -47,9 +47,14 @@ describe('FieldStepComponent', () => {
     fixture.detectChanges();
   });
 
-  function show(id: 'name' | 'email' | 'password', errors: readonly ValidationErrorCode[] = []): void {
+  function show(
+    id: 'name' | 'email' | 'password',
+    errors: readonly ValidationErrorCode[] = [],
+    value = '',
+  ): void {
     host.field.set(getFieldDefinition(id));
     host.step.set(['name', 'email', 'password'].indexOf(id) + 1);
+    host.value.set(value);
     host.errors.set(errors);
     fixture.detectChanges();
   }
@@ -97,12 +102,45 @@ describe('FieldStepComponent', () => {
   });
 
   it('sets aria-invalid and points aria-errormessage and aria-describedby at the visible error', () => {
-    show('email', ['EMAIL_MISSING_AT', 'EMAIL_INVALID_DOMAIN']);
+    show('email', ['EMAIL_MISSING_AT'], 'anna.rossi.esempio.it');
 
     const error = el.querySelector<HTMLElement>(`#${input().getAttribute('aria-errormessage')}`)!;
     expect(input().getAttribute('aria-invalid')).toBe('true');
     expect(error.textContent?.trim()).toContain('Errore nel campo Email: manca la chiocciola.');
     expect(describedBy()[0]).toBe(error);
+  });
+
+  it('marks the error with a text icon, not only with colour', () => {
+    show('email', ['EMAIL_MISSING_AT']);
+    const icon = el.querySelector('.field__error .field__error-icon')!;
+    expect(icon.textContent).toBe('!');
+    expect(icon.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('with more errors shows the count and every message, all linked to the input', () => {
+    show('password', ['PASSWORD_TOO_SHORT', 'PASSWORD_MISSING_DIGIT'], 'abc');
+
+    const error = describedBy()[0];
+    expect(error.id).toBe(input().getAttribute('aria-errormessage'));
+    expect(error.querySelector('p')!.textContent?.trim()).toBe('2 errori trovati nel campo Password:');
+    expect(Array.from(error.querySelectorAll('li')).map((li) => li.textContent?.trim())).toEqual([
+      'la password è troppo corta: hai scritto 3 caratteri, ne servono almeno 8.',
+      'la password è debole: aggiungi un numero.',
+    ]);
+  });
+
+  it('never shows the password itself in the error', () => {
+    show('password', ['PASSWORD_TOO_SHORT', 'PASSWORD_MISSING_DIGIT'], 'abc');
+    expect(el.querySelector('.field__error')!.textContent).not.toContain('abc');
+  });
+
+  it('keeps the message of the last validation while the user types', () => {
+    show('password', ['PASSWORD_TOO_SHORT'], 'abc1');
+    host.value.set('abc12');
+    fixture.detectChanges();
+
+    expect(el.querySelector('.field__error')!.textContent).toContain('hai scritto 4 caratteri');
+    expect(input().getAttribute('aria-invalid')).toBe('true');
   });
 
   it('emits typed values without validating them', () => {
@@ -178,6 +216,7 @@ describe('FieldStepComponent', () => {
       ['email', ['EMAIL_MISSING_AT']],
       ['password', []],
       ['password', ['PASSWORD_TOO_SHORT']],
+      ['password', ['PASSWORD_TOO_SHORT', 'PASSWORD_MISSING_DIGIT']],
     ] as const)('has no violations for %s with errors %j', async (id, errors) => {
       show(id, errors);
       await expectNoAxeViolations(el);
