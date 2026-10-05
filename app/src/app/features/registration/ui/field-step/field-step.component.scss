@@ -1,0 +1,62 @@
+:host {
+  display: block;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-block: 1.5rem;
+}
+
+.field__label {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.field__hint,
+.field__rules {
+  margin: 0;
+}
+
+.field__rules {
+  padding-inline-start: 1.25rem;
+}
+
+.field__error {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  font-weight: 700;
+  color: var(--color-error);
+  border-inline-start: 4px solid currentColor;
+}
+
+/* Icona testuale: resta visibile anche in forced-colors, dove il colore non distingue l'errore. */
+.field__error-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.field__control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.field__input {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.field--invalid .field__input {
+  border-color: var(--color-error);
+  border-width: 3px;
+}

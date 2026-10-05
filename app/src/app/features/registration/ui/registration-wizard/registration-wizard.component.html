@@ -1,0 +1,42 @@
+<app-progress-indicator [step]="stepNumber()" [total]="totalSteps" />
+
+@switch (step()) {
+  @case ('welcome') {
+    <app-welcome (start)="start()" />
+  }
+  @case ('summary') {
+    <app-review-step
+      [fields]="fields"
+      [values]="store.values()"
+      [submitting]="store.submitting()"
+      (edit)="edit($event)"
+      (back)="back()"
+      (confirm)="confirm()"
+    />
+  }
+  @case ('done') {
+    <app-completion [name]="store.values().name" />
+  }
+  @default {
+    @if (field(); as current) {
+      <form novalidate (submit)="next($event)">
+        <app-field-step
+          [field]="current"
+          [value]="store.values()[current.id]"
+          [errors]="store.currentErrors()"
+          [step]="stepNumber()!"
+          [totalSteps]="totalSteps"
+          (valueChange)="setValue(current.id, $event)"
+        >
+          <!-- Stub del pannello di assistenza (Ripeti, Spiega in altro modo, Esempio, Rileggi): arriva da core/assist. -->
+          <div class="assist-panel"></div>
+        </app-field-step>
+
+        <div class="actions">
+          <button type="button" (click)="back()">Indietro</button>
+          <button type="submit" class="button--primary">Avanti</button>
+        </div>
+      </form>
+    }
+  }
+}

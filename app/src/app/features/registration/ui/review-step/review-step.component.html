@@ -1,0 +1,35 @@
+<h1 tabindex="-1">{{ title }}</h1>
+<p>Controlla i tuoi dati. Per correggere un dato premi Modifica accanto al dato.</p>
+
+<dl class="review">
+  @for (field of fields(); track field.id) {
+    <div class="review__row">
+      <dt>{{ field.label }}</dt>
+      <dd>
+        @if (field.inputType === 'password') {
+          <span aria-hidden="true">••••••••</span>
+          <span class="review__note">inserita, {{ passwordLength(values()[field.id]) }} caratteri, non mostrata</span>
+        } @else {
+          {{ values()[field.id] }}
+        }
+      </dd>
+      <dd class="review__action">
+        <button type="button" class="link-button" (click)="edit.emit(field.id)">
+          Modifica {{ field.label.toLowerCase() }}
+        </button>
+      </dd>
+    </div>
+  }
+</dl>
+
+<div class="actions">
+  <button type="button" (click)="back.emit()">Indietro</button>
+  <button
+    type="button"
+    class="button--primary"
+    [attr.aria-disabled]="submitting() ? 'true' : null"
+    (click)="submitting() || confirm.emit()"
+  >
+    Conferma registrazione
+  </button>
+</div>

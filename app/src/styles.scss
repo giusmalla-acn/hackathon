@@ -5,6 +5,8 @@
   --color-background: #ffffff;
   --focus-outline-color: #0b0c0c;
   --focus-halo-color: #ffdd00;
+  --color-error: #b00020;
+  --color-border: #505a5f;
 }
 
 *,
@@ -20,6 +22,53 @@ body {
   line-height: 1.5;
   color: var(--color-text);
   background: var(--color-background);
+}
+
+main {
+  max-width: 40rem;
+  margin-inline: auto;
+  padding: 1rem;
+}
+
+h1 {
+  font-size: 1.75rem;
+  line-height: 1.25;
+}
+
+/* Form controls and buttons: at least 44x44 CSS px, well above the 24x24 minimum (WCAG 2.5.8). */
+input:not([type='radio']):not([type='checkbox']) {
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-background);
+  border: 2px solid var(--color-border);
+  border-radius: 4px;
+}
+
+button {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  font: inherit;
+  font-weight: 700;
+  color: var(--color-text);
+  background: #f3f2f1;
+  border: 2px solid var(--color-text);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button.button--primary {
+  color: var(--color-background);
+  background: var(--color-text);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block: 1.5rem;
 }
 
 /* Visually hidden but still announced by screen readers. */
