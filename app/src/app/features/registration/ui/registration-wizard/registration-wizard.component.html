@@ -28,8 +28,15 @@
           [totalSteps]="totalSteps"
           (valueChange)="setValue(current.id, $event)"
         >
-          <!-- Stub del pannello di assistenza (Ripeti, Spiega in altro modo, Esempio, Rileggi): arriva da core/assist. -->
-          <div class="assist-panel"></div>
+          <app-assist-panel
+            [field]="current"
+            [step]="stepNumber()!"
+            [totalSteps]="totalSteps"
+            [value]="store.values()[current.id]"
+            [errorCodes]="store.currentErrors()"
+            (navigate)="onAssistNavigate($event)"
+            (focusFieldRequested)="focusField()"
+          />
         </app-field-step>
 
         <div class="actions">

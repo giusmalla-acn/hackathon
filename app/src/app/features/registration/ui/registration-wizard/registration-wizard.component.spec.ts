@@ -1,7 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { provideAssist } from '../../../../core/assist';
+
 import { Narrator } from '../../../../core/contracts';
 import { NarrationService } from '../../../../core/narration';
+import { REGISTRATION_FIELDS } from '../../data/registration-fields';
 import { RegistrationGateway } from '../../data/registration.gateway';
 import { expectNoAxeViolations, tabbables, tabName } from '../testing/a11y-helpers';
 import { RegistrationWizardComponent } from './registration-wizard.component';
@@ -25,6 +28,7 @@ describe('RegistrationWizardComponent', () => {
         { provide: NarrationService, useValue: narrator },
         { provide: Narrator, useExisting: NarrationService },
         { provide: RegistrationGateway, useValue: { register } },
+        provideAssist(REGISTRATION_FIELDS),
       ],
     });
     fixture = TestBed.createComponent(RegistrationWizardComponent);
@@ -119,12 +123,71 @@ describe('RegistrationWizardComponent', () => {
     expectFocusOnTitle('Registrazione completata');
     expect(lastSaid()).toEqual(['Registrazione completata, Anna Rossi. Il tuo account è stato creato.']);
     await expectNoAxeViolations(el);
+
+    // E2-7: in storage solo le preferenze di lettura, mai i valori del form.
+    expect(Object.keys(localStorage).filter((key) => key !== 'a11y-prefs')).toEqual([]);
+    expect(sessionStorage.length).toBe(0);
+    for (const value of ['Anna Rossi', 'anna.rossi@esempio.it', 'Girasole42']) {
+      expect(localStorage.getItem('a11y-prefs') ?? '').not.toContain(value);
+    }
   });
 
-  it('keeps the field order: input, assist panel slot, Indietro, Avanti', async () => {
+  it('keeps the field order: input, assist panel, Indietro, Avanti', async () => {
     await press('Inizia');
-    expect(tabbables(el).map(tabName)).toEqual(['INPUT', 'Indietro', 'Avanti']);
-    expect(el.querySelector('app-field-step .assist-panel')).not.toBeNull();
+    expect(tabbables(el).map(tabName)).toEqual([
+      'INPUT',
+      'Ripeti',
+      'Spiega in altro modo',
+      'Esempio',
+      'Rileggi cosa ho scritto',
+      'Indietro',
+      'Avanti',
+    ]);
+    expect(el.querySelector('app-field-step app-assist-panel')).not.toBeNull();
+  });
+
+  it('answers the assist buttons with the static texts, without AI', async () => {
+    await press('Inizia');
+    await type('Anna');
+
+    await press('Ripeti');
+    expect(lastSaid()).toEqual(['Passo 1 di 3: Nome. Scrivi il tuo nome, poi premi Avanti.']);
+
+    await press('Spiega in altro modo');
+    expect(lastSaid()).toEqual(['Spiegazione 1 di 3: Scrivi come ti chiami.']);
+
+    await press('Esempio');
+    expect(lastSaid()).toEqual(['Esempio: Anna Rossi. È solo un esempio, il campo non è stato modificato.']);
+    expect(field().value).toBe('Anna');
+
+    await press('Rileggi cosa ho scritto');
+    expect(lastSaid()).toEqual(['Hai scritto: Anna. Lettera per lettera: A maiuscola, n, n, a.']);
+  });
+
+  it('repeats the active error with Ripeti', async () => {
+    await press('Inizia');
+    await press('Avanti');
+    await press('Ripeti');
+    expect(lastSaid()[0]).toBe(
+      'Passo 1 di 3: Nome. Scrivi il tuo nome, poi premi Avanti. Errore nel campo Nome: il nome è vuoto. Scrivi il tuo nome, poi premi Avanti.',
+    );
+  });
+
+  it('returns the focus to the password field when its read-back is cancelled', async () => {
+    await press('Inizia');
+    await type('Anna');
+    await press('Avanti');
+    await type('anna@esempio.it');
+    await press('Avanti');
+    await type('Girasole42');
+    narrator.say.mockClear();
+
+    await press('Rileggi cosa ho scritto');
+    expect(el.querySelector('[role="alertdialog"]')).not.toBeNull();
+    await press('No, torna al campo');
+
+    expect(document.activeElement).toBe(field());
+    expect(narrator.say.mock.calls.flat().join(' ')).not.toContain('Girasole42');
   });
 
   it('submits the step with Enter in the field', async () => {
@@ -197,6 +260,7 @@ describe('RegistrationWizardComponent', () => {
     await press('Inizia');
 
     expect(lastSaid()[0]).toMatch(/^Modalità voce integrata attiva\..* Passo 1 di 3: Nome\. Scrivi il tuo nome, poi premi Avanti\.$/);
+    expect(Object.keys(localStorage)).toEqual(['a11y-prefs']);
   });
 
   it('stops the narration on Esc and while typing', async () => {

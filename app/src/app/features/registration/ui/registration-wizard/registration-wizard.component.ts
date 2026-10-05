@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 
 import { FocusService } from '../../../../core/a11y/focus.service';
+import { AssistPanelComponent, type AssistNavigation } from '../../../../core/assist';
 import type { FieldId } from '../../../../core/contracts';
 import { Narrator } from '../../../../core/contracts';
 import { SpeechPreferencesStore } from '../../../../core/narration';
@@ -41,6 +42,7 @@ import { WelcomeComponent } from '../welcome/welcome.component';
   selector: 'app-registration-wizard',
   standalone: true,
   imports: [
+    AssistPanelComponent,
     CompletionComponent,
     FieldStepComponent,
     ProgressIndicatorComponent,
@@ -96,6 +98,15 @@ export class RegistrationWizardComponent {
 
   protected async confirm(): Promise<void> {
     this.afterAction(await this.store.submit());
+  }
+
+  /** Comandi vocali "campo precedente/successivo" del pannello di assistenza. */
+  protected onAssistNavigate(direction: AssistNavigation): void {
+    this.afterAction(direction === 'previous' ? this.store.prev() : this.store.next());
+  }
+
+  protected focusField(): void {
+    this.fieldStep()?.focusInput();
   }
 
   /** `moved`: lo store ha cambiato passo. Altrimenti, se il campo ha errori, li segnala. */
